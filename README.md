@@ -531,4 +531,3 @@ Testing fixes and deploying updates during scheduled maintenance windows.
 Monitoring system performance, security, and backups continuously.
 
 The team will use adaptive maintenance and perfective maintenance and preventive maintenance to maintain system efficiency and security through their work on updates and database tuning and security patching and performance monitoring activities.
-<img width="468" height="644" alt="image" src="https://github.com/user-attachments/assets/de85730d-dbab-473f-9cde-66862bd08784" />
