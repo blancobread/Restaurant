@@ -1,6 +1,6 @@
-import bycrypt from 'bycryptjs';
+import bcrypt from 'bcryptjs';
 import prisma from '../lib/prisma.js';
-import { generateToken } from '../utils.jwt.js';
+import { generateToken } from '../utils/jwt.js';
 
 export const registerUser = async (userData) => {
     const { userEmail, userPassword, userName, userPhonehone, userMailingAddress, userBillingAddress, isBillingAddressSame, preferredPayment } = userData;
