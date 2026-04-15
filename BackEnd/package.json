@@ -6,7 +6,15 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "node src/lib/seed.js",
+    "db:reset": "prisma db push --force-reset && node src/lib/seed.js",
+    "db:studio": "prisma studio",
+    "format": "biome format . --write",
+    "lint": "biome lint .",
+    "check": "biome check . --write"
   },
   "keywords": [],
   "author": "",
@@ -19,9 +27,11 @@
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
     "express-validator": "^7.3.2",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "mariadb": "^3.5.2"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
     "nodemon": "^3.1.14",
     "prisma": "^7.7.0"
   }
