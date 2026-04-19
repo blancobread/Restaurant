@@ -1,6 +1,6 @@
-import bcrypt from 'bcryptjs';
-import prisma from '../lib/prisma.js';
-import { generateToken } from '../utils/jwt.js';
+import bcrypt from "bcryptjs";
+import prisma from "../lib/prisma.js";
+import { generateToken } from "../utils/jwt.js";
 
 export const registerUser = async (userData) => {
     const {
@@ -11,7 +11,7 @@ export const registerUser = async (userData) => {
         userMailingAddress,
         userBillingAddress,
         isBillingAddressSame,
-        preferredPayment
+        preferredPayment,
     } = userData;
 
     const existingUser = await prisma.users.findUnique({
@@ -21,10 +21,11 @@ export const registerUser = async (userData) => {
     });
 
     if (existingUser) {
-        throw new Error('User with this Email Id already exists');
+        throw new Error("User with this Email Id already exists");
     }
 
     const hashedPassword = await bcrypt.hash(userPassword, 10);
+
     const user = await prisma.users.create({
         data: {
             email: userEmail,
@@ -36,8 +37,8 @@ export const registerUser = async (userData) => {
                 ? userMailingAddress
                 : userBillingAddress,
             billing_same_as_mailing: isBillingAddressSame,
-            preferred_payment_method: preferredPayment || 'CASH',
-            preferred_diner_number: `DINER-${Date.now()}`
+            preferred_payment_method: preferredPayment || "CASH",
+            preferred_diner_number: `DINER-${Date.now()}`,
         },
         select: {
             id: true,
@@ -65,13 +66,16 @@ export const userLogin = async (userEmail, userPassword) => {
     });
 
     if (!user || !user.password_hash) {
-        throw new Error('Invalid email or password');
+        throw new Error("Invalid email or password");
     }
 
-    const isPasswordValid = await bcrypt.compare(userPassword, user.password_hash);
+    const isPasswordValid = await bcrypt.compare(
+        userPassword,
+        user.password_hash,
+    );
 
     if (!isPasswordValid) {
-        throw new Error('Invalid email or password');
+        throw new Error("Invalid email or password");
     }
 
     const token = generateToken({
@@ -107,7 +111,7 @@ export const createGuestUser = async (guestData) => {
                 name: userName,
                 phone: userPhone,
                 preferred_diner_number: `GUEST-${Date.now()}`,
-                password_hash: '',
+                password_hash: "",
             },
         });
     }
@@ -135,7 +139,7 @@ export const upgradeGuestToRegistered = async (userId, registrationData) => {
                 ? userMailingAddress
                 : userBillingAddress,
             billing_same_as_mailing: isBillingAddressSame,
-            preferred_payment_method: preferredPayment || 'CASH',
+            preferred_payment_method: preferredPayment || "CASH",
         },
         select: {
             id: true,

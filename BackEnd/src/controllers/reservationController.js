@@ -18,14 +18,11 @@ export const searchAvailableTables = async (req, res, next) => {
             numberOfGuests: parseInt(numberOfGuests),
         });
 
-        console.log('controller got result:', result);
-
         res.status(200).json({
             success: true,
             data: result,
         });
     } catch (error) {
-        console.log('controller error:', error);
         next(error);
     }
 };
