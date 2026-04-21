@@ -3,15 +3,16 @@ import prisma from '../lib/prisma.js';
 export const getAvailableTablesForReservation = async (date, time, numberOfGuests) => {
     const allTables = await prisma.restaurant_tables.findMany({
         where: {
-            is_active: true
+            is_active: true,
         },
         orderBy: {
-            capacity: 'asc'
+            capacity: 'asc',
         },
     });
 
     const reservationDate = new Date(date);
     reservationDate.setHours(0, 0, 0, 0);
+
     const nextDay = new Date(reservationDate);
     nextDay.setDate(nextDay.getDate() + 1);
 
@@ -19,37 +20,66 @@ export const getAvailableTablesForReservation = async (date, time, numberOfGuest
         where: {
             reservation_date: {
                 gte: reservationDate,
-                lt: nextDay
+                lt: nextDay,
             },
             status: {
                 in: ['PENDING', 'CONFIRMED'],
             },
         },
         include: {
-            reservation_tables: {
-                include: {
-                    restaurant_tables: true
-                },
-            },
+            reservation_tables: true,
         },
     });
 
     const reservedTableIds = new Set();
 
-    existingReservations.forEach(reservation => {
-        const resTime = String(reservation.reservation_time).split(':')[0];
-        const requestTime = parseInt(time.split(':')[0]);
+    // const [requestHour, requestMinute] = time.split(':').map(Number);
+    // const requestTotalMinutes = requestHour * 60 + requestMinute;
 
-        if (Math.abs(parseInt(resTime) - requestTime) < 2) {
-            reservation.reservation_tables.forEach(rt => {
+    // existingReservations.forEach((reservation) => {
+    //     const reservationTime = new Date(reservation.reservation_time);
+    //     const reservationHour = reservationTime.getHours();
+    //     const reservationMinute = reservationTime.getMinutes();
+    //     const reservationTotalMinutes = reservationHour * 60 + reservationMinute;
+
+    //     // block table if reservation is within 2 hours
+    //     if (Math.abs(reservationTotalMinutes - requestTotalMinutes) < 120) {
+    //         reservation.reservation_tables.forEach((rt) => {
+    //             reservedTableIds.add(rt.table_id);
+    //         });
+    //     }
+    //});
+    const normalizeToHHMMSS = (timeValue) => {
+        const raw = String(timeValue);
+        const match = raw.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+
+        if (!match) {
+            throw new Error(`Invalid time value: ${timeValue}`);
+        }
+
+        const hh = match[1].padStart(2, '0');
+        const mm = match[2];
+        const ss = match[3] ? match[3] : '00';
+
+        return `${hh}:${mm}:${ss}`;
+    };
+
+    const normalizedRequestTime = normalizeToHHMMSS(time);
+
+    existingReservations.forEach((reservation) => {
+        const dbTime = normalizeToHHMMSS(reservation.reservation_time);
+
+        // block ONLY same exact time
+        if (dbTime === normalizedRequestTime) {
+            reservation.reservation_tables.forEach((rt) => {
                 reservedTableIds.add(rt.table_id);
             });
         }
     });
 
-    const freeTables = allTables.filter(table => !reservedTableIds.has(table.id));
+    const freeTables = allTables.filter((table) => !reservedTableIds.has(table.id));
 
-    const directTables = freeTables.filter(table => table.capacity >= numberOfGuests);
+    const directTables = freeTables.filter((table) => table.capacity >= numberOfGuests);
 
     const combinations = findTableCombinations(freeTables, numberOfGuests);
 
@@ -58,7 +88,6 @@ export const getAvailableTablesForReservation = async (date, time, numberOfGuest
         suggestedCombinations: combinations,
     };
 };
-
 function findTableCombinations(tables, numberOfGuests) {
     const combinations = [];
 

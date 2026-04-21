@@ -39,6 +39,7 @@ export const registerUser = async (userData) => {
             billing_same_as_mailing: isBillingAddressSame,
             preferred_payment_method: preferredPayment || "CASH",
             preferred_diner_number: `DINER-${Date.now()}`,
+            isRegistered: true, // ✅ add this
         },
         select: {
             id: true,
@@ -53,8 +54,7 @@ export const registerUser = async (userData) => {
     });
 
     const token = generateToken({
-        userId: user.id,
-        userEmail: user.email,
+        id: user.id,
     });
 
     return { user, token };
@@ -79,8 +79,7 @@ export const userLogin = async (userEmail, userPassword) => {
     }
 
     const token = generateToken({
-        userId: user.id,
-        userEmail: user.email,
+        userId: user.id
     });
 
     return {
@@ -153,8 +152,7 @@ export const upgradeGuestToRegistered = async (userId, registrationData) => {
     });
 
     const token = generateToken({
-        userId: updatedUser.id,
-        userEmail: updatedUser.email,
+        userId: user.id
     });
 
     return { user: updatedUser, token };

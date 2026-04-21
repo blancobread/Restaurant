@@ -5,6 +5,7 @@ import { authenticateToken, optionalAuth } from '../middleware/authMiddleware.js
 import { validate } from '../middleware/validateMiddleware.js';
 
 const router = express.Router();
+console.log("reservationRoutes file is loaded");
 router.get('/test', (req, res) => {
     res.json({ message: 'Reservation route working' });
 });
@@ -37,15 +38,20 @@ router.post(
     reservationController.createReservation
 );
 
-// Get user's reservations (protected)
+// Complete reservation
+router.post('/complete/:id', reservationController.completeReservation);
+
+// Confirm reservation
+router.post('/confirm/:id', reservationController.confirmReservation);
+
+// Get user's reservations
 router.get('/my-reservations', authenticateToken, reservationController.getUserReservations);
 
-// Get reservation by ID
-router.get('/:id', reservationController.getReservationById);
+// Update / cancel
 router.put('/:id', authenticateToken, reservationController.updateReservation);
 router.put('/:id/cancel', authenticateToken, reservationController.cancelReservation);
 
-//need to implement complete reservation (After the customer actually comes and eats)
-
+// LAST
+router.get('/:id', reservationController.getReservationById);
 
 export default router;
