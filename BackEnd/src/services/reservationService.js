@@ -12,7 +12,13 @@ export const searchAvailableTables = async (searchData) => {
     const isHighTrafficDay = await checkIfHighTrafficDay(date);
     console.log('isHighTrafficDay:', isHighTrafficDay);
 
-    const result = await getAvailableTablesForReservation(date, time, numberOfGuests);
+    const normalizedTime = normalizeTime(reservationTime);
+
+    const result = await getAvailableTablesForReservation(
+        reservationDate,
+        normalizedTime,
+        numberOfGuests
+    );
     console.log('available result:', result);
 
     return {
@@ -74,24 +80,64 @@ export const createReservation = async (reservationData, userId = null) => {
         guestName,
         guestEmail,
         guestPhone,
-        reservationDate, reservationTime,
+        reservationDate,
+        reservationTime,
         numberOfGuests,
         selectedTableIds,
         specialRequests,
     } = reservationData;
 
-    //first we will check if the day is high traffic day
+    const normalizedTime = normalizeTime(reservationTime);
+    const reservationDateTime = new Date(`${reservationDate}T${normalizedTime}:00`);
+    const now = new Date();
+
+    if (isNaN(reservationDateTime.getTime())) {
+        throw new Error('Invalid reservation date or time');
+    }
+
+    if (reservationDateTime < now) {
+        throw new Error('Cannot create a reservation for a past date or time');
+    }
+
+    // exact conflict check for same table + same date + same time
+    const conflictingReservation = await prisma.reservations.findFirst({
+        where: {
+            reservation_date: new Date(reservationDate),
+            reservation_time: new Date(`1970-01-01T${normalizedTime}:00`), // ✅ FIX
+            status: {
+                in: ['PENDING', 'CONFIRMED'],
+            },
+            reservation_tables: {
+                some: {
+                    table_id: {
+                        in: selectedTableIds,
+                    },
+                },
+            },
+        },
+    });
+
+    if (conflictingReservation) {
+        throw new Error('One or more selected tables are already reserved for this date and time');
+    }
+
     const isHighTrafficDay = await checkIfHighTrafficDay(reservationDate);
-    const result = await getAvailableTablesForReservation(reservationDate, reservationTime, numberOfGuests);
+
+    const result = await getAvailableTablesForReservation(
+        reservationDate,
+        normalizedTime,
+        numberOfGuests
+    );
 
     const availableTables = result.availableTables.map(t => t.id);
-    const allTablesAvailable = selectedTableIds.every(id => availableTables.includes(id));
+    const allTablesAvailable = selectedTableIds.every(id =>
+        availableTables.includes(id)
+    );
 
     if (!allTablesAvailable) {
         throw new Error('One or more selected tables are not available');
     }
 
-    //Get table details
     const selectedTables = await prisma.restaurant_tables.findMany({
         where: { id: { in: selectedTableIds } },
     });
@@ -99,36 +145,30 @@ export const createReservation = async (reservationData, userId = null) => {
     const totalCapacity = selectedTables.reduce((sum, t) => sum + t.capacity, 0);
     const needsCombination = selectedTableIds.length > 1;
 
-    //To validate capacity
     if (totalCapacity < numberOfGuests) {
         throw new Error('Selected tables do not have sufficient capacity');
     }
 
-    //create or find user
-    let finalUserId = userId;
-    if (!finalUserId) {
-        //gues user will be created here
-        const guestUser = await prisma.users.findUnique({
-            where: { email: guestEmail },
+    let finalUserId = userId || null;
+
+    // if reservation is for a registered user, verify user exists
+    if (finalUserId) {
+        const existingUser = await prisma.users.findUnique({
+            where: { id: finalUserId },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                phone: true,
+                preferred_diner_number: true,
+            },
         });
 
-        if (guestUser) {
-            finalUserId = guestUser.id;
-        }
-        else {
-            const newGuestUser = await prisma.users.create({
-                data: {
-                    email: guestEmail,
-                    name: guestName,
-                    phone: guestPhone,
-                    isRegistered: false,
-                }
-            });
-            finalUserId = newGuestUser.id;
+        if (!existingUser) {
+            throw new Error('Registered user not found');
         }
     }
-    const normalizedTime = normalizeTime(reservationTime);
-    //create reservation
+
     const reservation = await prisma.reservations.create({
         data: {
             user_id: finalUserId,
@@ -162,18 +202,20 @@ export const createReservation = async (reservationData, userId = null) => {
                     email: true,
                     name: true,
                     phone: true,
-                    isRegistered: true,
                     preferred_diner_number: true,
                 },
             },
         },
     });
+
     const combinationNote = needsCombination
         ? `Tables ${selectedTables.map(t => t.table_number).join(' + ')} combined for ${numberOfGuests} guests`
         : null;
+
     return {
         reservation,
-        requiresRegistration: reservation.users ? !reservation.users.isRegistered : true,
+        isGuestReservation: !reservation.user_id,
+        requiresRegistration: !reservation.user_id,
         requiresHoldingFee: isHighTrafficDay,
         tablesCombined: needsCombination,
         combinationNote,
@@ -254,6 +296,110 @@ export const updateReservation = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+};
+
+export const completeReservation = async (reservationId, amountSpent) => {
+    if (amountSpent == null || amountSpent < 0) {
+        throw new Error('Valid amountSpent is required');
+    }
+
+    console.log("reservationId:", reservationId);
+
+    const reservation = await prisma.reservations.findUnique({
+        where: { id: reservationId },
+        include: {
+            users: true,
+        },
+    });
+
+    console.log("DB reservation:", reservation);
+
+    if (!reservation) {
+        throw new Error('Reservation not found');
+    }
+
+    console.log("Current status:", reservation.status);
+
+    if (reservation.status === 'COMPLETED') {
+        throw new Error('Reservation already completed');
+    }
+
+    if (reservation.status !== 'CONFIRMED') {
+        throw new Error(
+            `Only CONFIRMED reservations can be completed. Current status: ${reservation.status}`
+        );
+    }
+
+    const pointsEarned = Math.floor(amountSpent);
+
+    // 1. update reservation status
+    const updatedReservation = await prisma.reservations.update({
+        where: { id: reservationId },
+        data: { status: 'COMPLETED' },
+    });
+
+    let updatedUser = null;
+
+    // 2. update user points only if registered
+    if (reservation.users && reservation.users.isRegistered) {
+        updatedUser = await prisma.users.update({
+            where: { id: reservation.user_id },
+            data: {
+                earned_points: {
+                    increment: pointsEarned,
+                },
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                earned_points: true,
+                isRegistered: true,
+            },
+        });
+    }
+
+    // 3. ADD THIS BLOCK HERE → create transaction entry
+    const newTransaction = await prisma.transactions.create({
+        data: {
+            user_id: reservation.user_id || null,
+            reservation_id: reservationId,
+            amount_spent: amountSpent,
+            points_earned:
+                reservation.users && reservation.users.isRegistered ? pointsEarned : 0,
+            payment_method: 'CASH', // change later if you collect actual payment method
+            transaction_date: new Date(),
+        },
+    });
+
+    // 4. return response
+    return {
+        reservation: updatedReservation,
+        pointsEarned: reservation.users && reservation.users.isRegistered ? pointsEarned : 0,
+        user: updatedUser,
+        transaction: newTransaction,
+    };
+};
+
+export const confirmReservation = async (reservationId) => {
+    const reservation = await prisma.reservations.findUnique({
+        where: { id: reservationId },
+    });
+
+    if (!reservation) {
+        throw new Error('Reservation not found');
+    }
+
+    if (reservation.status !== 'PENDING') {
+        throw new Error(`Only PENDING reservations can be confirmed. Current status: ${reservation.status}`);
+    }
+
+    const updated = await prisma.reservations.update({
+        where: { id: reservationId },
+        data: { status: 'CONFIRMED' },
+    });
+
+    return updated;
 };
 //mark no-show for a reservation needs to be implemented
 //

@@ -115,4 +115,43 @@ export const updateReservation = async (req, res, next) => {
     }
 };
 
-//need to implement complete reservation here.
+// Mark a reservation as completed and record the amount spent
+export const completeReservation = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { amountSpent } = req.body;
+
+        if (!amountSpent || amountSpent <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Valid amount spent is required',
+            });
+        }
+
+        const result = await reservationService.completeReservation(id, amountSpent);
+
+        res.status(200).json({
+            success: true,
+            message: 'Reservation completed successfully',
+            data: result,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const confirmReservation = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const result = await reservationService.confirmReservation(id);
+
+        res.status(200).json({
+            success: true,
+            message: 'Reservation confirmed successfully',
+            data: result,
+        });
+    } catch (error) {
+        next(error);
+    }
+};

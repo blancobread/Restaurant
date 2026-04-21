@@ -3,8 +3,8 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import reservationRoutes from "./routes/reservationRoutes.js";
 import tableRoutes from "./routes/tableRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
-// import userRoutes from "./routes/userRoutes.js";
 
 const app = express();
 
@@ -27,7 +27,7 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/reservations", reservationRoutes);
 app.use("/api/tables", tableRoutes);
-// app.use("/api/users", userRoutes);
+app.use("/api/users", userRoutes);
 
 // Error handling
 app.use(notFound);
