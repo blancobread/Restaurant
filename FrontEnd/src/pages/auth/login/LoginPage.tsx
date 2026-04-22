@@ -41,12 +41,8 @@ export default function LoginPage() {
                     {`Welcome back to Reserve & Dine`}
                   </Typography>
                 </Box>
-                <Stack spacing={3} sx={{width: "stretch"}}>
-                  <TextField
-                    fullWidth
-                    label="User ID or Email"
-                    placeholder="Enter your user ID"
-                  />
+                <Stack spacing={3} sx={{ width: "stretch" }}>
+                  <TextField fullWidth label="User ID or Email" placeholder="Enter your user ID" />
                   <TextField
                     fullWidth
                     label="Password"
@@ -54,11 +50,7 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                   />
                 </Stack>
-                <Button
-                  variant="contained"
-                  size="large"
-                  className={styles.signInButton}
-                >
+                <Button variant="contained" size="large" className={styles.signInButton}>
                   Sign In
                 </Button>
                 <Box className={styles.footer}>
@@ -66,10 +58,7 @@ export default function LoginPage() {
                     Don&apos;t have an account?
                   </Typography>
 
-                  <Button
-                    onClick={() => navigate("/register")}
-                    className={styles.registerButton}
-                  >
+                  <Button onClick={() => navigate("/register")} className={styles.registerButton}>
                     Create one
                   </Button>
                 </Box>

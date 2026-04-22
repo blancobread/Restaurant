@@ -46,23 +46,11 @@ export default function RegisterPage() {
                 </Box>
 
                 <Stack spacing={3} className={styles.formStack}>
-                  <TextField
-                    fullWidth
-                    label="Full Name"
-                    placeholder="Enter your full name"
-                  />
+                  <TextField fullWidth label="Full Name" placeholder="Enter your full name" />
 
-                  <TextField
-                    fullWidth
-                    label="Email Address"
-                    placeholder="Enter your email"
-                  />
+                  <TextField fullWidth label="Email Address" placeholder="Enter your email" />
 
-                  <TextField
-                    fullWidth
-                    label="Phone Number"
-                    placeholder="Enter your phone number"
-                  />
+                  <TextField fullWidth label="Phone Number" placeholder="Enter your phone number" />
 
                   <TextField
                     fullWidth
@@ -79,11 +67,7 @@ export default function RegisterPage() {
                   />
                 </Stack>
 
-                <Button
-                  variant="contained"
-                  size="large"
-                  className={styles.registerButton}
-                >
+                <Button variant="contained" size="large" className={styles.registerButton}>
                   Create Account
                 </Button>
 
@@ -92,10 +76,7 @@ export default function RegisterPage() {
                     Already have an account?
                   </Typography>
 
-                  <Button
-                    onClick={() => navigate("/login")}
-                    className={styles.signInButton}
-                  >
+                  <Button onClick={() => navigate("/login")} className={styles.signInButton}>
                     Sign in
                   </Button>
                 </Box>

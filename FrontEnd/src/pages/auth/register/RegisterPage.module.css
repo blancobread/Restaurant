@@ -50,7 +50,7 @@
 
 .title {
   font-size: clamp(2.1rem, 6vw, 3.25rem) !important;
-  font-weight:700 !important;
+  font-weight: 700 !important;
   color: #0f172a;
   line-height: 1.1 !important;
 }

@@ -36,12 +36,7 @@ export type ReservationOption = {
   wastedSeats: number;
 };
 
-export type ReservationStatus =
-  | "pending"
-  | "confirmed"
-  | "cancelled"
-  | "completed"
-  | "no_show";
+export type ReservationStatus = "pending" | "confirmed" | "cancelled" | "completed" | "no_show";
 
 export type ReservationConfirmation = {
   id: string;
@@ -84,6 +79,13 @@ export type ApiErrorResponse = {
   message: string;
 };
 
+export type GuestDetails = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+};
+
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
 // =====================
@@ -91,9 +93,10 @@ export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 // =====================
 
 export type ReservationFlowState = {
-  searchValues: ReservationSearchFormValues | null;
-  availableOptions: ReservationOption[];
-  selectedOption: ReservationOption | null;
-  guestDetails: GuestReservationDetailsFormValues | null;
-  confirmation: ReservationConfirmation | null;
+  searchCriteria: ReservationSearchFormValues | null;
+  availableTables: ReservationOption[];
+  selectedTable: ReservationOption | null;
+  guestInfo: GuestReservationDetailsFormValues | null;
+  reservationConfirmation: ReservationConfirmation | null;
+  guestDetails: GuestDetails | null;
 };

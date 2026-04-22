@@ -9,34 +9,99 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  guestNumberOptions,
+  type ReservationOption,
+  type ReservationSearchFormValues,
+} from "../../types";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useReservationStore } from "../../store/reservationFlowStore";
+import { reservationSearchSchema } from "../../schema/reservationSchema";
+
+const mockReservationOptions: ReservationOption[] = [
+  {
+    id: "option-1",
+    tableIds: ["table-6"],
+    tableNumbers: [6],
+    totalCapacity: 8,
+    tablesNeedCombining: false,
+    wastedSeats: 0,
+  },
+  {
+    id: "option-2",
+    tableIds: ["table-3", "table-4"],
+    tableNumbers: [3, 4],
+    totalCapacity: 8,
+    tablesNeedCombining: true,
+    wastedSeats: 0,
+  },
+  {
+    id: "option-3",
+    tableIds: ["table-1", "table-5"],
+    tableNumbers: [1, 5],
+    totalCapacity: 8,
+    tablesNeedCombining: true,
+    wastedSeats: 0,
+  },
+];
 
 export default function ReservationPage() {
-  const hasSearched = false;
-  const guestNumberOptions = [2, 4, 6, 8, 10, 12];
+  const navigate = useNavigate();
+  const [hasSearched, setHasSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const reservationOptions: Array<{
-    id: string;
-    label: string;
-    capacity: number;
-    tablesNeedCombining: boolean;
-  }> = [];
+  const setSearchCriteria = useReservationStore((state) => state.setSearchCriteria);
+  const setAvailableTables = useReservationStore((state) => state.setAvailableTables);
+  const selectTable = useReservationStore((state) => state.selectTable);
+  const availableTables = useReservationStore((state) => state.availableTables);
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ReservationSearchFormValues>({
+    resolver: zodResolver(reservationSearchSchema),
+    defaultValues: {
+      date: "",
+      time: "",
+      numberOfGuests: 2,
+    },
+  });
+
+  const onSubmit = async (values: ReservationSearchFormValues) => {
+    setHasSearched(true);
+    setIsSearching(true);
+    setSearchCriteria(values);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const filteredOptions = mockReservationOptions.filter(
+      (option) => option.totalCapacity >= values.numberOfGuests,
+    );
+    setAvailableTables(filteredOptions);
+    setIsSearching(false);
+  };
+
+  const handleSelectTable = (option: ReservationOption) => {
+    selectTable(option);
+    navigate("/reservation/details");
+  };
 
   return (
     <Box
       sx={{
         minHeight: "100vh",
         background: "linear-gradient(180deg, #f7f2e7 0%, #f4f4f5 100%)",
-        py: { xs: 4, md: 8 },
       }}
     >
-      <Container maxWidth="lg" sx={{ height: "100vh" }}>
+      <Container>
         <Stack spacing={4}>
           <Box>
             <Typography
               variant="h2"
               sx={{
                 fontWeight: 700,
-                fontSize: { xs: "2.2rem", md: "3.5rem" },
                 color: "#0f172a",
               }}
             >
@@ -46,7 +111,6 @@ export default function ReservationPage() {
             <Typography
               variant="h6"
               sx={{
-                marginTop: "1.5rem",
                 color: "#475569",
               }}
             >
@@ -60,24 +124,64 @@ export default function ReservationPage() {
               boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
             }}
           >
-            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-              <Stack spacing={3}>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                  <TextField fullWidth type="date" />
+            <CardContent>
+              <Stack component="form" spacing={2} onSubmit={handleSubmit(onSubmit)}>
+                <Stack spacing={2}>
+                  <Controller
+                    name="date"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        type="date"
+                        error={Boolean(errors.date)}
+                        helperText={errors.date?.message}
+                      />
+                    )}
+                  />
 
-                  <TextField fullWidth type="time" />
-                  <TextField fullWidth select label="Number of Guests" defaultValue={2}>
-                    {guestNumberOptions.map((num) => (
-                      <MenuItem key={num} value={num}>
-                        {num} Guests
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                  <Controller
+                    name="time"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        type="time"
+                        error={Boolean(errors.time)}
+                        helperText={errors.time?.message}
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="numberOfGuests"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        select
+                        label="Number of Guests"
+                        error={Boolean(errors.numberOfGuests)}
+                        helperText={errors.numberOfGuests?.message}
+                      >
+                        {guestNumberOptions.map((num) => (
+                          <MenuItem key={num} value={num}>
+                            {num} Guests
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    )}
+                  />
                 </Stack>
 
                 <Button
+                  type="submit"
                   variant="contained"
                   size="large"
+                  disabled={isSubmitting || isSearching}
                   sx={{
                     minHeight: 55,
                     borderRadius: 5,
@@ -89,33 +193,25 @@ export default function ReservationPage() {
                       backgroundColor: "#c2410c",
                     },
                   }}
-                  onClick={() => {
-                    // TODO:
-                    // 1. validate form
-                    // 2. call backend search endpoint
-                    // 3. store results in Zustand
-                    // 4. render results below or navigate to next step
-                  }}
                 >
-                  Search Available Tables
+                  {isSearching ? "Searching..." : "Search Available Tables"}
                 </Button>
               </Stack>
             </CardContent>
           </Card>
+
           <Card
             sx={{
               borderRadius: 5,
-
               boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
             }}
           >
-            <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+            <CardContent>
               <Stack spacing={2}>
                 <Typography
                   variant="h4"
                   sx={{
                     fontWeight: 700,
-
                     color: "#0f172a",
                   }}
                 >
@@ -123,40 +219,28 @@ export default function ReservationPage() {
                 </Typography>
 
                 {!hasSearched ? (
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color: "#64748b",
-                    }}
-                  >
+                  <Typography variant="body1" sx={{ color: "#64748b" }}>
                     Search for available tables to see reservation options.
                   </Typography>
-                ) : reservationOptions.length === 0 ? (
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color: "#64748b",
-                    }}
-                  >
+                ) : isSearching ? (
+                  <Typography variant="body1" sx={{ color: "#64748b" }}>
+                    Checking table availability...
+                  </Typography>
+                ) : availableTables.length === 0 ? (
+                  <Typography variant="body1" sx={{ color: "#64748b" }}>
                     No available tables were found for that time.
                   </Typography>
                 ) : (
                   <Stack spacing={2}>
-                    {reservationOptions.map((option) => (
-                      <Card
-                        key={option.id}
-                        variant="outlined"
-                        sx={{
-                          borderRadius: 4,
-                        }}
-                      >
+                    {availableTables.map((option) => (
+                      <Card key={option.id} variant="outlined" sx={{ borderRadius: 5 }}>
                         <CardContent>
                           <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            {option.label}
+                            Table Option: {option.tableNumbers.join(" + ")}
                           </Typography>
 
                           <Typography variant="body2" sx={{ color: "#475569", mt: 1 }}>
-                            Capacity: {option.capacity}
+                            Capacity: {option.totalCapacity}
                           </Typography>
 
                           <Typography variant="body2" sx={{ color: "#475569" }}>
@@ -164,6 +248,23 @@ export default function ReservationPage() {
                               ? "Tables need to be combined"
                               : "Single table available"}
                           </Typography>
+
+                          <Typography variant="body2" sx={{ color: "#475569" }}>
+                            Wasted Seats: {option.wastedSeats}
+                          </Typography>
+
+                          <Button
+                            variant="contained"
+                            sx={{
+                              mt: 2,
+                              textTransform: "none",
+                              borderRadius: 5,
+                              fontWeight: 700,
+                            }}
+                            onClick={() => handleSelectTable(option)}
+                          >
+                            Select This Option
+                          </Button>
                         </CardContent>
                       </Card>
                     ))}
