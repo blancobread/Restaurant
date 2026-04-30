@@ -1,4 +1,8 @@
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../../../store/authStore";
+import { useEffect } from "react";
+import axios from "axios";
+
 import {
   Box,
   Button,
@@ -8,6 +12,9 @@ import {
   Stack,
   TextField,
   Typography,
+  FormControlLabel,
+  Checkbox,
+  MenuItem,
 } from "@mui/material";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import PersonAddAltRoundedIcon from "@mui/icons-material/PersonAddAltRounded";
@@ -15,6 +22,62 @@ import styles from "./RegisterPage.module.css";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+
+  const {
+    registerForm,
+    setRegisterField,
+    loading,
+    error,
+    setLoading,
+    setError,
+    resetRegisterForm,
+  } = useAuthStore();
+
+  useEffect(() => {
+    resetRegisterForm();
+  }, []);
+
+  const handleRegister = async () => {
+    try {
+      setError(null);
+
+      if (registerForm.password !== registerForm.confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+
+      setLoading(true);
+
+      await axios.post("http://localhost:5001/api/auth/register", {
+        userName: registerForm.name,
+        userEmail: registerForm.email,
+        userPhone: registerForm.phone,
+        userPassword: registerForm.password,
+        userMailingAddress: registerForm.mailingAddress,
+        userBillingAddress: registerForm.billingSameAsMailing
+          ? registerForm.mailingAddress
+          : registerForm.billingAddress,
+        isBillingAddressSame: registerForm.billingSameAsMailing,
+        preferredPayment: registerForm.preferredPayment,
+      });
+
+      const loginRes = await axios.post("http://localhost:5001/api/auth/login", {
+        userEmail: registerForm.email,
+        userPassword: registerForm.password,
+      });
+
+      // store token
+      localStorage.setItem("token", loginRes.data.data.token);
+
+      // go to profile
+      resetRegisterForm();
+      navigate("/profile");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Registration Failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Box className={styles.page}>
@@ -48,15 +111,70 @@ export default function RegisterPage() {
                 <Stack spacing={3} className={styles.formStack}>
                   <TextField fullWidth label="Full Name" placeholder="Enter your full name" />
 
-                  <TextField fullWidth label="Email Address" placeholder="Enter your email" />
+                  <TextField
+                    fullWidth
+                    label="Full Name"
+                    placeholder="Enter your full name"
+                    value={registerForm.name}
+                    onChange={(e) => setRegisterField("name", e.target.value)}
+                  />
 
-                  <TextField fullWidth label="Phone Number" placeholder="Enter your phone number" />
+                  <TextField
+                    fullWidth
+                    label="Phone Number"
+                    placeholder="Enter your phone number"
+                    value={registerForm.phone}
+                    onChange={(e) => setRegisterField("phone", e.target.value)}
+                  />
+
+                  <TextField
+                    fullWidth
+                    label="Mailing Address"
+                    placeholder="Enter your mailing address"
+                    value={registerForm.mailingAddress}
+                    onChange={(e) => setRegisterField("mailingAddress", e.target.value)}
+                  />
+
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={registerForm.billingSameAsMailing}
+                        onChange={(e) => setRegisterField("billingSameAsMailing", e.target.checked)}
+                      />
+                    }
+                    label="Billing address same as mailing address"
+                  />
+
+                  {!registerForm.billingSameAsMailing && (
+                    <TextField
+                      fullWidth
+                      label="Billing Address"
+                      placeholder="Enter your billing address"
+                      value={registerForm.billingAddress}
+                      onChange={(e) => setRegisterField("billingAddress", e.target.value)}
+                    />
+                  )}
+
+                  <TextField
+                    fullWidth
+                    select
+                    label="Preferred Payment"
+                    value={registerForm.preferredPayment}
+                    onChange={(e) => setRegisterField("preferredPayment", e.target.value)}
+                  >
+                    <MenuItem value="CASH">Cash</MenuItem>
+                    <MenuItem value="CREDIT">Credit</MenuItem>
+                    <MenuItem value="CHECK">Check</MenuItem>
+                  </TextField>
 
                   <TextField
                     fullWidth
                     label="Password"
                     type="password"
                     placeholder="Create a password"
+                    value={registerForm.password}
+                    autoComplete="new-password"
+                    onChange={(e) => setRegisterField("password", e.target.value)}
                   />
 
                   <TextField
@@ -64,10 +182,19 @@ export default function RegisterPage() {
                     label="Confirm Password"
                     type="password"
                     placeholder="Confirm your password"
+                    value={registerForm.confirmPassword}
+                    autoComplete="new-password"
+                    onChange={(e) => setRegisterField("confirmPassword", e.target.value)}
                   />
                 </Stack>
 
-                <Button variant="contained" size="large" className={styles.registerButton}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  className={styles.registerButton}
+                  onClick={handleRegister}
+                  disabled={loading}
+                >
                   Create Account
                 </Button>
 

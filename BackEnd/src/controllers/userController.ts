@@ -7,10 +7,9 @@ import type {
   UpdateUserProfileRequest,
 } from "../types.js";
 
-function getAuthenticatedUserId(req: AppRequest): string | null {
-  return req.user?.id ?? req.userId ?? null;
+function getAuthenticatedUserId<TBody>(req: AppRequest<TBody>): string | null {
+  return req.user?.id ?? null;
 }
-
 export const getUserProfile = async (
   req: AppRequest,
   res: AppResponse,

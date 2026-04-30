@@ -26,6 +26,9 @@ export default function ReservationPage() {
   const navigate = useNavigate();
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const today = new Date().toLocaleDateString("en-CA");
 
   const setSearchCriteria = useReservationStore((state) => state.setSearchCriteria);
   const setAvailableTables = useReservationStore((state) => state.setAvailableTables);
@@ -45,45 +48,87 @@ export default function ReservationPage() {
     },
   });
 
-function mapBackendResultsToOptions(
-  data: any,
-  numberOfGuests: number,
-): ReservationOption[] {
-  const directTableOptions: ReservationOption[] = data.availableTables.map(
-    (table: any) => ({
+  type BackendTable = {
+    id: string;
+    table_number?: string | number;
+    tableNumber?: string | number;
+    capacity: number;
+  };
+
+  type BackendCombination = {
+    tables: BackendTable[];
+    totalCapacity: number;
+    needsCombination: boolean;
+  };
+
+  type BackendAvailabilityData = {
+    availableTables: BackendTable[];
+    suggestedCombinations: BackendCombination[];
+  };
+
+  function mapBackendResultsToOptions(
+    data: BackendAvailabilityData,
+    numberOfGuests: number,
+  ): ReservationOption[] {
+    const directTableOptions = data.availableTables.map((table) => ({
       id: `table-option-${table.id}`,
       tableIds: [table.id],
-      tableNumbers: [table.table_number],
+      tableNumbers: [
+        Number(table.table_number ?? table.tableNumber ?? 0)
+      ],
       totalCapacity: table.capacity,
       tablesNeedCombining: false,
       wastedSeats: table.capacity - numberOfGuests,
-    }),
-  );
+    }));
 
-  const combinationOptions: ReservationOption[] = data.suggestedCombinations.map(
-    (combo: any, index: number) => ({
+    const combinationOptions = data.suggestedCombinations.map((combo, index) => ({
       id: `combo-option-${index}`,
-      tableIds: combo.tables.map((table: any) => table.id),
-      tableNumbers: combo.tables.map((table: any) => table.table_number),
+      tableIds: combo.tables.map((table) => table.id),
+      tableNumbers: combo.tables.map((table) =>
+        Number(table.table_number ?? table.tableNumber)
+      ),
       totalCapacity: combo.totalCapacity,
       tablesNeedCombining: combo.needsCombination,
       wastedSeats: combo.totalCapacity - numberOfGuests,
-    }),
-  );
+    }));
 
-  return [...directTableOptions, ...combinationOptions];
-}
+    return [...directTableOptions, ...combinationOptions];
+  }
 
   const onSubmit = async (values: ReservationSearchFormValues) => {
+    setErrorMessage("");
+
+    const selectedDate = new Date(`${values.date}T00:00:00`);
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < todayDate) {
+      setErrorMessage("Please select today or a future date.");
+      setAvailableTables([]);
+      setHasSearched(false);
+      return;
+    }
+
+    const [hour, minute] = values.time.split(":").map(Number);
+    const selectedMinutes = hour * 60 + minute;
+
+    const openingMinutes = 10 * 60;
+    const closingMinutes = 22 * 60;
+
+    if (selectedMinutes < openingMinutes || selectedMinutes > closingMinutes) {
+      setErrorMessage("Reservations are only allowed between 10:00 AM and 10:00 PM.");
+      setAvailableTables([]);
+      setHasSearched(false);
+      return;
+    }
+
     setHasSearched(true);
     setIsSearching(true);
     setSearchCriteria(values);
+
     try {
       const response = await searchAvailableTables(values);
-      const options = mapBackendResultsToOptions(
-        response.data,
-        values.numberOfGuests,
-      );
+      const options = mapBackendResultsToOptions(response.data, values.numberOfGuests);
       setAvailableTables(options);
     } catch (error) {
       console.error(error);
@@ -91,7 +136,7 @@ function mapBackendResultsToOptions(
     } finally {
       setIsSearching(false);
     }
-};
+  };
 
   const handleSelectTable = (option: ReservationOption) => {
     selectTable(option);
@@ -108,32 +153,16 @@ function mapBackendResultsToOptions(
       <Container>
         <Stack spacing={4}>
           <Box>
-            <Typography
-              variant="h2"
-              sx={{
-                fontWeight: 700,
-                color: "#0f172a",
-              }}
-            >
+            <Typography variant="h2" sx={{ fontWeight: 700, color: "#0f172a" }}>
               Reserve a Table
             </Typography>
 
-            <Typography
-              variant="h6"
-              sx={{
-                color: "#475569",
-              }}
-            >
+            <Typography variant="h6" sx={{ color: "#475569" }}>
               Choose your date, time, and party size to find available tables.
             </Typography>
           </Box>
 
-          <Card
-            sx={{
-              borderRadius: 5,
-              boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-            }}
-          >
+          <Card sx={{ borderRadius: 5, boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}>
             <CardContent>
               <Stack component="form" spacing={2} onSubmit={handleSubmit(onSubmit)}>
                 <Stack spacing={2}>
@@ -145,6 +174,11 @@ function mapBackendResultsToOptions(
                         {...field}
                         fullWidth
                         type="date"
+                        slotProps={{
+                          htmlInput: {
+                            min: today,
+                          },
+                        }}
                         error={Boolean(errors.date)}
                         helperText={errors.date?.message}
                       />
@@ -174,6 +208,8 @@ function mapBackendResultsToOptions(
                         fullWidth
                         select
                         label="Number of Guests"
+                        value={field.value}
+                        onChange={(event) => field.onChange(Number(event.target.value))}
                         error={Boolean(errors.numberOfGuests)}
                         helperText={errors.numberOfGuests?.message}
                       >
@@ -187,6 +223,12 @@ function mapBackendResultsToOptions(
                   />
                 </Stack>
 
+                {errorMessage && (
+                  <Typography color="error" sx={{ fontWeight: 600 }}>
+                    {errorMessage}
+                  </Typography>
+                )}
+
                 <Button
                   type="submit"
                   variant="contained"
@@ -199,9 +241,7 @@ function mapBackendResultsToOptions(
                     fontWeight: 700,
                     fontSize: "1rem",
                     backgroundColor: "#ea580c",
-                    "&:hover": {
-                      backgroundColor: "#c2410c",
-                    },
+                    "&:hover": { backgroundColor: "#c2410c" },
                   }}
                 >
                   {isSearching ? "Searching..." : "Search Available Tables"}
@@ -210,21 +250,10 @@ function mapBackendResultsToOptions(
             </CardContent>
           </Card>
 
-          <Card
-            sx={{
-              borderRadius: 5,
-              boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-            }}
-          >
+          <Card sx={{ borderRadius: 5, boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}>
             <CardContent>
               <Stack spacing={2}>
-                <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 700,
-                    color: "#0f172a",
-                  }}
-                >
+                <Typography variant="h4" sx={{ fontWeight: 700, color: "#0f172a" }}>
                   Available Options
                 </Typography>
 
@@ -265,12 +294,7 @@ function mapBackendResultsToOptions(
 
                           <Button
                             variant="contained"
-                            sx={{
-                              mt: 2,
-                              textTransform: "none",
-                              borderRadius: 5,
-                              fontWeight: 700,
-                            }}
+                            sx={{ mt: 2, textTransform: "none", borderRadius: 5, fontWeight: 700 }}
                             onClick={() => handleSelectTable(option)}
                           >
                             Select This Option

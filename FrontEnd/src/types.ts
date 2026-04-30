@@ -21,7 +21,7 @@ export type ReservationSearchFormValues = {
 // =====================
 
 export type ReservationOption = {
-  id: string;d
+  id: string;
   tableIds: string[];
   tableNumbers: number[];
   totalCapacity: number;
@@ -48,6 +48,26 @@ export type ReservationConfirmation = {
   holdingFeeAmount?: number | null;
   specialDay?: boolean;
   specialDayReason?: string | null;
+};
+
+export type ReservationDetails = {
+  id: string;
+  user_id?: string | null;
+  guest_name: string | null;
+  guest_email: string | null;
+  guest_phone: string | null;
+  reservation_date: string;
+  reservation_time: string;
+  number_of_guests: number;
+  status: string;
+  requires_holding_fee: boolean;
+  holding_fee_amount: string;
+  reservation_tables: {
+    restaurant_tables: {
+      table_number: number;
+      capacity: number;
+    };
+  }[];
 };
 
 // =====================
@@ -92,4 +112,11 @@ export type ReservationFlowState = {
   selectedTable: ReservationOption | null;
   reservationConfirmation: ReservationConfirmation | null;
   guestDetails: GuestDetails | null;
+};
+
+export type GuestReservationDetailsFormValues = {
+  guestName: string;
+  guestEmail: string;
+  guestPhone: string;
+  specialRequests?: string;
 };
