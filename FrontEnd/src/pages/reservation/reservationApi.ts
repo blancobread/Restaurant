@@ -20,6 +20,9 @@ export async function createReservation(payload: CreateReservationPayload) {
     specialRequests: payload.guestInfo.specialRequest,
   };
 
+  console.log("CREATE RESERVATION REQUEST BODY:", requestBody);
+  console.log("SELECTED TABLE:", payload.selectedTable);
+
   const token = localStorage.getItem("token");
 
   const response = await fetch(`${API_URL}/api/reservations`, {

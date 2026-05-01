@@ -7,6 +7,7 @@ import type {
 import { isWeekend } from "../utils/dateHelpers.js";
 import { normalizeTime } from "../utils/timeHelper.js";
 import { getAvailableTablesForReservation } from "./tableService.js";
+import { HttpError } from "../utils/httpError.js";
 
 export const searchAvailableTables = async (
   searchData: SearchAvailableTablesInput,
@@ -33,15 +34,22 @@ export const authorizeHoldingFee = async (reservationId: string) => {
   const reservation = await prisma.reservations.findUnique({
     where: { id: reservationId },
   });
+
   if (!reservation) {
-    throw new Error("Reservation not found");
+    throw new HttpError("Reservation not found", 404);
   }
+
   if (!reservation.requires_holding_fee) {
-    throw new Error("This reservation does not require a holding fee");
+    throw new HttpError("This reservation does not require a holding fee", 400);
   }
+
   if (reservation.status !== "PENDING") {
-    throw new Error(`Only PENDING reservations can be confirmed. Current status: ${reservation.status}`);
+    throw new HttpError(
+      `Only PENDING reservations can be confirmed. Current status: ${reservation.status}`,
+      400,
+    );
   }
+
   return prisma.reservations.update({
     where: { id: reservationId },
     data: {
@@ -51,7 +59,9 @@ export const authorizeHoldingFee = async (reservationId: string) => {
   });
 };
 
-async function checkIfHighTrafficDay(date: Date): Promise<boolean> {
+async function checkIfHighTrafficDay(
+  date: Date | string,
+): Promise<boolean> {
   const d = new Date(date);
 
   const month = d.getMonth() + 1;
@@ -63,15 +73,8 @@ async function checkIfHighTrafficDay(date: Date): Promise<boolean> {
     where: {
       is_active: true,
       OR: [
-        {
-          pattern_type: "fixed_annual",
-          month,
-          day,
-        },
-        {
-          pattern_type: "weekly",
-          weekday,
-        },
+        { pattern_type: "fixed_annual", month, day },
+        { pattern_type: "weekly", weekday },
         {
           pattern_type: "nth_weekday_annual",
           month,
@@ -106,30 +109,39 @@ export const createReservation = async (
     specialRequests,
   } = reservationData;
 
+  if (!selectedTableIds || selectedTableIds.length === 0) {
+    throw new HttpError("At least one table must be selected", 400);
+  }
+
   const normalizedTime = normalizeTime(reservationTime);
+
+  const [hour, minute] = normalizedTime.split(":").map(Number);
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) {
+    throw new HttpError("Invalid reservation time", 400);
+  }
+
+  const selectedMinutes = hour * 60 + minute;
+  const openingMinutes = 10 * 60;
+  const closingMinutes = 22 * 60;
+
+  if (selectedMinutes < openingMinutes || selectedMinutes > closingMinutes) {
+    throw new HttpError(
+      "Reservations are only allowed between 10:00 AM and 10:00 PM",
+      400,
+    );
+  }
 
   const reservationDateTime = new Date(
     `${reservationDate}T${normalizedTime}:00`,
   );
 
-  const now = new Date();
-
   if (Number.isNaN(reservationDateTime.getTime())) {
-    throw new Error("Invalid reservation date or time");
+    throw new HttpError("Invalid reservation date or time", 400);
   }
 
-  const [hour, minute] = normalizedTime.split(":").map(Number);
-  const selectedMinutes = hour * 60 + minute;
-
-  const openingMinutes = 10 * 60; // 10:00 AM
-  const closingMinutes = 22 * 60; // 10:00 PM
-
-  if (selectedMinutes < openingMinutes || selectedMinutes > closingMinutes) {
-    throw new Error("Reservations are only allowed between 10:00 AM and 10:00 PM");
-  }
-
-  if (reservationDateTime.getTime() < now.getTime()) {
-    throw new Error("Cannot create a reservation for a past date or time");
+  if (reservationDateTime.getTime() < Date.now()) {
+    throw new HttpError("Cannot create a reservation for a past date or time", 400);
   }
 
   const conflictingReservation = await prisma.reservations.findFirst({
@@ -150,28 +162,10 @@ export const createReservation = async (
   });
 
   if (conflictingReservation) {
-    throw new Error(
+    throw new HttpError(
       "One or more selected tables are already reserved for this date and time",
+      409,
     );
-  }
-
-  const isHighTrafficDay = await checkIfHighTrafficDay(reservationDate);
-  const holdingFeeAmount = isHighTrafficDay ? 10.0 : 0;
-
-  const result = await getAvailableTablesForReservation(
-    reservationDate,
-    normalizedTime,
-    numberOfGuests,
-  );
-
-  const availableTableIds = result.availableTables.map((table) => table.id);
-
-  const allTablesAvailable = selectedTableIds.every((id) =>
-    availableTableIds.includes(id),
-  );
-
-  if (!allTablesAvailable) {
-    throw new Error("One or more selected tables are not available");
   }
 
   const selectedTables = await prisma.restaurant_tables.findMany({
@@ -179,19 +173,30 @@ export const createReservation = async (
       id: {
         in: selectedTableIds,
       },
+      is_active: true,
     },
   });
+
+  if (selectedTables.length !== selectedTableIds.length) {
+    throw new HttpError(
+      "One or more selected tables are not active or do not exist",
+      400,
+    );
+  }
 
   const totalCapacity = selectedTables.reduce(
     (sum, table) => sum + table.capacity,
     0,
   );
 
+  if (totalCapacity < numberOfGuests) {
+    throw new HttpError("Selected tables do not have sufficient capacity", 400);
+  }
+
   const needsCombination = selectedTableIds.length > 1;
 
-  if (totalCapacity < numberOfGuests) {
-    throw new Error("Selected tables do not have sufficient capacity");
-  }
+  const isHighTrafficDay = await checkIfHighTrafficDay(reservationDate);
+  const holdingFeeAmount = isHighTrafficDay ? 10.0 : 0;
 
   const finalUserId =
     userId && userId !== "undefined" && userId !== "null" ? userId : null;
@@ -207,13 +212,13 @@ export const createReservation = async (
     });
 
     if (!existingUser) {
-      throw new Error("Registered user not found");
+      throw new HttpError("Registered user not found", 404);
     }
   }
 
   const reservation = await prisma.reservations.create({
     data: {
-      user_id: finalUserId ?? null,
+      user_id: finalUserId,
       guest_name: guestName,
       guest_email: guestEmail,
       guest_phone: guestPhone,
@@ -252,8 +257,8 @@ export const createReservation = async (
 
   const combinationNote = needsCombination
     ? `Tables ${selectedTables
-      .map((table) => table.table_number)
-      .join(" + ")} combined for ${numberOfGuests} guests`
+        .map((table) => table.table_number)
+        .join(" + ")} combined for ${numberOfGuests} guests`
     : null;
 
   return {
@@ -321,11 +326,11 @@ export const cancelReservation = async (
   });
 
   if (!reservation) {
-    throw new Error("Reservation not found");
+    throw new HttpError("Reservation not found", 404);
   }
 
   if (reservation.user_id !== userId) {
-    throw new Error("You do not have permission to cancel this reservation");
+    throw new HttpError("You do not have permission to cancel this reservation", 403);
   }
 
   return prisma.reservations.update({
@@ -355,7 +360,7 @@ export const completeReservation = async (
   amountSpent: number,
 ) => {
   if (amountSpent == null || amountSpent < 0) {
-    throw new Error("Valid amountSpent is required");
+    throw new HttpError("Valid amountSpent is required", 400);
   }
 
   const reservation = await prisma.reservations.findUnique({
@@ -368,16 +373,17 @@ export const completeReservation = async (
   });
 
   if (!reservation) {
-    throw new Error("Reservation not found");
+    throw new HttpError("Reservation not found", 404);
   }
 
   if (reservation.status === "COMPLETED") {
-    throw new Error("Reservation already completed");
+    throw new HttpError("Reservation already completed", 400);
   }
 
   if (reservation.status !== "CONFIRMED") {
-    throw new Error(
+    throw new HttpError(
       `Only CONFIRMED reservations can be completed. Current status: ${reservation.status}`,
+      400,
     );
   }
 
@@ -447,12 +453,13 @@ export const confirmReservation = async (reservationId: string) => {
   });
 
   if (!reservation) {
-    throw new Error("Reservation not found");
+    throw new HttpError("Reservation not found", 404);
   }
 
   if (reservation.status !== "PENDING") {
-    throw new Error(
+    throw new HttpError(
       `Only PENDING reservations can be confirmed. Current status: ${reservation.status}`,
+      400,
     );
   }
 
