@@ -254,3 +254,23 @@ export const confirmReservation = async (
     return next(error);
   }
 };
+
+export const markNoShow = async (
+  req: AppRequest<EmptyBody, ReservationIdParams>,
+  res: AppResponse,
+  next: AppNext,
+) => {
+  try {
+    const { id } = req.params;
+
+    const result = await reservationService.markNoShow(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Reservation marked as no-show",
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};

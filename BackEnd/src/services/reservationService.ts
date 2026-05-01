@@ -453,3 +453,39 @@ export const confirmReservation = async (reservationId: string) => {
     },
   });
 };
+
+export const markNoShow = async (reservationId: string) => {
+  const reservation = await prisma.reservations.findUnique({
+    where: { id: reservationId },
+  });
+
+  if (!reservation) {
+    throw new Error("Reservation not found");
+  }
+
+  if (reservation.status !== "CONFIRMED") {
+    throw new Error("Only CONFIRMED reservations can be marked as no-show");
+  }
+
+  const chargeAmount = 25;
+
+  const updatedReservation = await prisma.reservations.update({
+    where: { id: reservationId },
+    data: { status: "NO_SHOW" },
+  });
+
+  const charge = await prisma.no_show_charges.create({
+    data: {
+      reservation_id: reservationId,
+      user_id: reservation.user_id ?? null,
+      charge_amount: chargeAmount,
+      charge_status: "pending",
+      charged_at: new Date(),
+    },
+  });
+
+  return {
+    reservation: updatedReservation,
+    charge,
+  };
+};

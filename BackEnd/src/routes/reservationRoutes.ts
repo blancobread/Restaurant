@@ -1,6 +1,7 @@
 import express from "express";
 import { body, query } from "express-validator";
 import * as reservationController from "../controllers/reservationController.js";
+
 import {
   authenticateToken,
   optionalAuth,
@@ -78,9 +79,10 @@ router.put(
   reservationController.cancelReservation,
 );
 
+// No-show
+router.post("/no-show/:id", reservationController.markNoShow);
+
 // LAST
 router.get("/:id", reservationController.getReservationById);
-
-console.log("authorizeHoldingFee:", reservationController.authorizeHoldingFee);
 
 export default router;
