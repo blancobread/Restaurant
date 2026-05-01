@@ -79,7 +79,48 @@ export default function ReservationConfirmationPage() {
               Confirmation ID: {reservation.id}
             </Typography>
           </Box>
+          {!isRegisteredUser ? (
+              <Card sx={{ marginTop: 4, borderRadius: 4 }}>
+                <CardContent>
+                  <Stack spacing={2}>
+                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                      Create an Account
+                    </Typography>
 
+                    <Typography sx={{ color: "#475569" }}>
+                      Create an account to manage this reservation, view your reservation history,
+                      earn dining points, and save your preferences for faster bookings in the
+                      future.
+                    </Typography>
+
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={2}
+                      sx={{ justifyContent: "center" }}
+                    >
+                      <Button
+                        variant="contained"
+                        onClick={() =>
+                          navigate("/register", {
+                            state: {
+                              name: reservation.guest_name,
+                              email: reservation.guest_email,
+                              phone: reservation.guest_phone,
+                            },
+                          })
+                        }
+                      >
+                        Create Account
+                      </Button>
+
+                      <Button variant="outlined" onClick={() => navigate("/reservation")}>
+                        Continue as Guest
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </CardContent>
+              </Card>
+            ) : null}
           <Card sx={{ borderRadius: 4 }}>
             <CardContent>
               <Stack spacing={2}>
@@ -117,7 +158,6 @@ export default function ReservationConfirmationPage() {
             >
               Make Another Reservation
             </Button>
-
             {isRegisteredUser ? (
               <Button variant="outlined" onClick={() => navigate("/profile")} sx={{ width: 300 }}>
                 View Profile
