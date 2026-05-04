@@ -78,6 +78,8 @@ router.put(
   reservationController.cancelReservation,
 );
 
+router.get("/admin/all", reservationController.getAllReservations);
+
 // LAST
 router.get("/:id", reservationController.getReservationById);
 
