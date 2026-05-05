@@ -46,9 +46,7 @@ export default function ReservationPaymentPage() {
         setReservation(response.data);
       } catch (error) {
         const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to load reservation payment details.";
+          error instanceof Error ? error.message : "Unable to load reservation payment details.";
 
         setErrorMessage(message);
       } finally {
@@ -116,10 +114,7 @@ export default function ReservationPaymentPage() {
 
       navigate(`/reservation/confirmation/${reservation.id}`);
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to authorize holding fee.";
+      const message = error instanceof Error ? error.message : "Unable to authorize holding fee.";
 
       setPaymentError(message);
     } finally {
@@ -139,9 +134,7 @@ export default function ReservationPaymentPage() {
     return (
       <Container sx={{ py: 6 }}>
         <Stack spacing={2}>
-          <Typography color="error">
-            {errorMessage || "Reservation not found."}
-          </Typography>
+          <Typography color="error">{errorMessage || "Reservation not found."}</Typography>
 
           <Button variant="contained" onClick={() => navigate("/reservation")}>
             Back to Reservations
@@ -227,9 +220,7 @@ export default function ReservationPaymentPage() {
                 {isAuthorizing ? "Authorizing..." : "Authorize Holding Fee"}
               </Button>
 
-              {paymentError && (
-                <Typography color="error">{paymentError}</Typography>
-              )}
+              {paymentError && <Typography color="error">{paymentError}</Typography>}
 
               <Button variant="outlined" onClick={() => navigate("/reservation")}>
                 Back to Reservation Search

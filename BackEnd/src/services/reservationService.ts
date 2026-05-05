@@ -313,8 +313,8 @@ export const createReservation = async (
 
   const combinationNote = needsCombination
     ? `Tables ${selectedTables
-      .map((table) => table.table_number)
-      .join(" + ")} combined for ${numberOfGuests} guests`
+        .map((table) => table.table_number)
+        .join(" + ")} combined for ${numberOfGuests} guests`
     : null;
 
   return {

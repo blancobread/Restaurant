@@ -15,38 +15,38 @@ import ReservationDetailsPage from "../pages/reservation/details/ReservationDeta
 import ReservationPaymentPage from "../pages/reservation/payment/ReservationPaymentPage";
 import ReservationPage from "../pages/reservation/ReservationPage";
 export const router = createBrowserRouter([
-    {
-        element: _jsx(MainLayout, {}),
-        children: [
-            { path: "/", element: _jsx(HomePage, {}) },
-            { path: "/reservation", element: _jsx(ReservationPage, {}) },
-            { path: "/reservation/details", element: _jsx(ReservationDetailsPage, {}) },
-            {
-                path: "/reservation/payment/:id",
-                element: _jsx(ReservationPaymentPage, {}),
-            },
-            {
-                path: "/reservation/confirmation/:id",
-                element: _jsx(ReservationConfirmationPage, {}),
-            },
-        ],
-    },
-    {
-        element: _jsx(AuthLayout, {}),
-        children: [
-            { path: "/login", element: _jsx(LoginPage, {}) },
-            { path: "/register", element: _jsx(RegisterPage, {}) },
-        ],
-    },
-    {
-        element: _jsx(DashboardLayout, {}),
-        children: [
-            { path: "/dashboard", element: _jsx(DashboardPage, {}) },
-            { path: "/profile", element: _jsx(ProfilePage, {}) },
-        ],
-    },
-    {
-        element: _jsx(AdminLayout, {}),
-        children: [{ path: "/admin", element: _jsx(AdminDashboardPage, {}) }],
-    },
+  {
+    element: _jsx(MainLayout, {}),
+    children: [
+      { path: "/", element: _jsx(HomePage, {}) },
+      { path: "/reservation", element: _jsx(ReservationPage, {}) },
+      { path: "/reservation/details", element: _jsx(ReservationDetailsPage, {}) },
+      {
+        path: "/reservation/payment/:id",
+        element: _jsx(ReservationPaymentPage, {}),
+      },
+      {
+        path: "/reservation/confirmation/:id",
+        element: _jsx(ReservationConfirmationPage, {}),
+      },
+    ],
+  },
+  {
+    element: _jsx(AuthLayout, {}),
+    children: [
+      { path: "/login", element: _jsx(LoginPage, {}) },
+      { path: "/register", element: _jsx(RegisterPage, {}) },
+    ],
+  },
+  {
+    element: _jsx(DashboardLayout, {}),
+    children: [
+      { path: "/dashboard", element: _jsx(DashboardPage, {}) },
+      { path: "/profile", element: _jsx(ProfilePage, {}) },
+    ],
+  },
+  {
+    element: _jsx(AdminLayout, {}),
+    children: [{ path: "/admin", element: _jsx(AdminDashboardPage, {}) }],
+  },
 ]);

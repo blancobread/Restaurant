@@ -1,43 +1,53 @@
 import { create } from "zustand";
 const initialState = {
-    reservationMode: null,
-    searchCriteria: null,
-    availableTables: [],
-    selectedTable: null,
-    guestInfo: null,
-    reservationConfirmation: null,
-    guestDetails: null,
+  reservationMode: null,
+  searchCriteria: null,
+  availableTables: [],
+  selectedTable: null,
+  guestInfo: null,
+  reservationConfirmation: null,
+  guestDetails: null,
 };
 export const useReservationStore = create()((set) => ({
-    ...initialState,
-    setReservationMode: (mode) => set(() => ({
-        reservationMode: mode,
+  ...initialState,
+  setReservationMode: (mode) =>
+    set(() => ({
+      reservationMode: mode,
     })),
-    setGuestDetails: (details) => set(() => ({
-        guestDetails: details,
+  setGuestDetails: (details) =>
+    set(() => ({
+      guestDetails: details,
     })),
-    setSearchCriteria: (values) => set(() => ({
-        searchCriteria: values,
+  setSearchCriteria: (values) =>
+    set(() => ({
+      searchCriteria: values,
     })),
-    setAvailableTables: (options) => set(() => ({
-        availableTables: options,
+  setAvailableTables: (options) =>
+    set(() => ({
+      availableTables: options,
     })),
-    selectTable: (option) => set(() => ({
-        selectedTable: option,
+  selectTable: (option) =>
+    set(() => ({
+      selectedTable: option,
     })),
-    setGuestInfo: (details) => set(() => ({
-        guestInfo: details,
+  setGuestInfo: (details) =>
+    set(() => ({
+      guestInfo: details,
     })),
-    setReservationConfirmation: (confirmation) => set(() => ({
-        reservationConfirmation: confirmation,
+  setReservationConfirmation: (confirmation) =>
+    set(() => ({
+      reservationConfirmation: confirmation,
     })),
-    clearAvailableTables: () => set(() => ({
-        availableTables: [],
+  clearAvailableTables: () =>
+    set(() => ({
+      availableTables: [],
     })),
-    clearSelectedTable: () => set(() => ({
-        selectedTable: null,
+  clearSelectedTable: () =>
+    set(() => ({
+      selectedTable: null,
     })),
-    resetReservation: () => set(() => ({
-        ...initialState,
+  resetReservation: () =>
+    set(() => ({
+      ...initialState,
     })),
 }));
