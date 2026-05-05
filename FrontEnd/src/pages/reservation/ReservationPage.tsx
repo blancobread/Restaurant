@@ -312,7 +312,6 @@ export default function ReservationPage() {
                               fontWeight: 700,
                             }}
                             onClick={() => {
-                              console.log("CLICKED OPTION:", option);
                               selectTable(option);
                               navigate("/reservation/details");
                             }}
