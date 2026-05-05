@@ -88,8 +88,6 @@ export const createReservation = async (
   try {
     const userId = req.user?.id ?? null;
 
-    console.log("Reservation create userId:", userId);
-
     const result = await reservationService.createReservation(req.body, userId);
 
     res.status(201).json({
@@ -217,8 +215,9 @@ export const completeReservation = async (
 ) => {
   try {
     const { id } = req.params;
-    const { amountSpent } = req.body;
+    const { amountSpent, paymentMethod } = req.body;
 
+    // ✅ validate amount
     if (!amountSpent || amountSpent <= 0) {
       return res.status(400).json({
         success: false,
@@ -226,9 +225,20 @@ export const completeReservation = async (
       });
     }
 
+    // ✅ validate payment method
+    const validMethods = ["CASH", "CREDIT", "CHECK"];
+    if (!paymentMethod || !validMethods.includes(paymentMethod)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid payment method is required",
+      });
+    }
+
+    // ✅ call service with payment method
     const result = await reservationService.completeReservation(
       id,
       amountSpent,
+      paymentMethod,
     );
 
     return res.status(200).json({
@@ -254,6 +264,26 @@ export const confirmReservation = async (
     return res.status(200).json({
       success: true,
       message: "Reservation confirmed successfully",
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const markNoShow = async (
+  req: AppRequest<EmptyBody, ReservationIdParams>,
+  res: AppResponse,
+  next: AppNext,
+) => {
+  try {
+    const { id } = req.params;
+
+    const result = await reservationService.markNoShow(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Reservation marked as no-show",
       data: result,
     });
   } catch (error) {

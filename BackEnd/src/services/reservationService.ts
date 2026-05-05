@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import { $Enums } from "@prisma/client";
 import type {
   CreateReservationRequest,
   ReservationServiceUserId,
@@ -281,8 +282,8 @@ export const createReservation = async (
 
   const combinationNote = needsCombination
     ? `Tables ${selectedTables
-        .map((table) => table.table_number)
-        .join(" + ")} combined for ${numberOfGuests} guests`
+      .map((table) => table.table_number)
+      .join(" + ")} combined for ${numberOfGuests} guests`
     : null;
 
   return {
@@ -382,18 +383,15 @@ export const updateReservation = async (
 export const completeReservation = async (
   reservationId: string,
   amountSpent: number,
+  paymentMethod: $Enums.transactions_payment_method,
 ) => {
   if (amountSpent == null || amountSpent < 0) {
     throw new HttpError("Valid amountSpent is required", 400);
   }
 
   const reservation = await prisma.reservations.findUnique({
-    where: {
-      id: reservationId,
-    },
-    include: {
-      users: true,
-    },
+    where: { id: reservationId },
+    include: { users: true },
   });
 
   if (!reservation) {
@@ -414,25 +412,15 @@ export const completeReservation = async (
   const pointsEarned = Math.floor(amountSpent);
 
   const updatedReservation = await prisma.reservations.update({
-    where: {
-      id: reservationId,
-    },
-    data: {
-      status: "COMPLETED",
-    },
+    where: { id: reservationId },
+    data: { status: "COMPLETED" },
   });
 
   let updatedUser = null;
 
-  if (
-    reservation.users &&
-    reservation.users.isRegistered &&
-    reservation.user_id
-  ) {
+  if (reservation.user_id) {
     updatedUser = await prisma.users.update({
-      where: {
-        id: reservation.user_id,
-      },
+      where: { id: reservation.user_id },
       data: {
         earned_points: {
           increment: pointsEarned,
@@ -443,27 +431,27 @@ export const completeReservation = async (
         name: true,
         email: true,
         earned_points: true,
-        isRegistered: true,
       },
     });
   }
+
+  const finalPaymentMethod =
+    paymentMethod ?? reservation.users?.preferred_payment_method;
 
   const newTransaction = await prisma.transactions.create({
     data: {
       user_id: reservation.user_id ?? null,
       reservation_id: reservationId,
       amount_spent: amountSpent,
-      points_earned:
-        reservation.users && reservation.users.isRegistered ? pointsEarned : 0,
-      payment_method: "CASH",
+      points_earned: pointsEarned,
+      payment_method: finalPaymentMethod,
       transaction_date: new Date(),
     },
   });
 
   return {
     reservation: updatedReservation,
-    pointsEarned:
-      reservation.users && reservation.users.isRegistered ? pointsEarned : 0,
+    pointsEarned,
     user: updatedUser,
     transaction: newTransaction,
   };
@@ -495,4 +483,40 @@ export const confirmReservation = async (reservationId: string) => {
       status: "CONFIRMED",
     },
   });
+};
+
+export const markNoShow = async (reservationId: string) => {
+  const reservation = await prisma.reservations.findUnique({
+    where: { id: reservationId },
+  });
+
+  if (!reservation) {
+    throw new Error("Reservation not found");
+  }
+
+  if (reservation.status !== "CONFIRMED") {
+    throw new Error("Only CONFIRMED reservations can be marked as no-show");
+  }
+
+  const chargeAmount = 10.0;
+
+  const updatedReservation = await prisma.reservations.update({
+    where: { id: reservationId },
+    data: { status: "NO_SHOW" },
+  });
+
+  const charge = await prisma.no_show_charges.create({
+    data: {
+      reservation_id: reservationId,
+      user_id: reservation.user_id ?? null,
+      charge_amount: chargeAmount,
+      charge_status: "pending",
+      charged_at: new Date(),
+    },
+  });
+
+  return {
+    reservation: updatedReservation,
+    charge,
+  };
 };
