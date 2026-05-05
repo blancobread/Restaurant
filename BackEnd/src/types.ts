@@ -77,8 +77,8 @@ export type UserIdParams = {
 
 export type AuthUser = {
   id: string;
-  email: string;
-  name: string;
+  email?: string;
+  name?: string;
   isGuest?: boolean;
 };
 

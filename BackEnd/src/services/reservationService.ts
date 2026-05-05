@@ -450,7 +450,12 @@ export const completeReservation = async (
     data: { status: "COMPLETED" },
   });
 
-  let updatedUser = null;
+  let updatedUser: {
+  id: string;
+  name: string;
+  email: string;
+  earned_points: number | null;
+} | null = null;
 
   if (reservation.user_id) {
     updatedUser = await prisma.users.update({

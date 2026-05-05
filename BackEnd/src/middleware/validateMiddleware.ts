@@ -8,7 +8,7 @@ export const validate = (req, res, next) => {
       success: false,
       message: "Validation failed",
       errors: errors.array().map((err) => ({
-        field: err.path,
+        field: "path" in err ? err.path : "unknown",
         message: err.msg,
       })),
     });

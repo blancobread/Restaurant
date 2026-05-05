@@ -57,7 +57,7 @@ export const authenticateToken = async (req, res, next) => {
     return res.status(500).json({
       success: false,
       message: "Authentication error",
-      error: error.message,
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
