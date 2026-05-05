@@ -7,9 +7,9 @@ import tableRoutes from "./routes/tableRoutes";
 import userRoutes from "./routes/userRoutes";
 
 const app = express();
-
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") ?? [];
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+  origin: allowedOrigins,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
