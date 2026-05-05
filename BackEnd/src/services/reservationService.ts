@@ -82,8 +82,7 @@ export const authorizeHoldingFee = async (reservationId: string) => {
 };
 
 async function checkIfHighTrafficDay(date: Date | string): Promise<boolean> {
-  const d = new Date(date);
-
+  const d = new Date(`${date}T00:00:00`);
   const month = d.getMonth() + 1;
   const day = d.getDate();
   const weekday = d.getDay();
@@ -280,8 +279,8 @@ export const createReservation = async (
 
   const combinationNote = needsCombination
     ? `Tables ${selectedTables
-        .map((table) => table.table_number)
-        .join(" + ")} combined for ${numberOfGuests} guests`
+      .map((table) => table.table_number)
+      .join(" + ")} combined for ${numberOfGuests} guests`
     : null;
 
   return {

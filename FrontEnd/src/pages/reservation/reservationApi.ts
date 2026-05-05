@@ -35,10 +35,12 @@ export async function createReservation(
 
   const response = await fetch(`${API_URL}/api/reservations`, {
     method: "POST",
-    headers,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify(requestBody),
   });
-
   const data = await response.json();
 
   if (!response.ok) {
