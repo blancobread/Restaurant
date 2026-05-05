@@ -51,7 +51,9 @@ export default function ReservationPage() {
         },
     });
     function mapBackendResultsToOptions(data, numberOfGuests) {
-        const directTableOptions = data.availableTables.map((table) => ({
+        const directTableOptions = data.availableTables
+            .filter((table) => table.capacity >= numberOfGuests)
+            .map((table) => ({
             id: `table-option-${table.id}`,
             tableIds: [table.id],
             tableNumbers: [table.table_number],
@@ -66,10 +68,10 @@ export default function ReservationPage() {
             tableIds: combo.tables.map((table) => table.id),
             tableNumbers: combo.tables.map((table) => table.table_number),
             totalCapacity: combo.totalCapacity,
-            tablesNeedCombining: combo.tables.length > 1,
+            tablesNeedCombining: true,
             wastedSeats: combo.totalCapacity - numberOfGuests,
         }));
-        return combinationOptions.length > 0 ? combinationOptions : directTableOptions;
+        return directTableOptions.length > 0 ? directTableOptions : combinationOptions;
     }
     const onSubmit = async (values) => {
         setErrorMessage("");

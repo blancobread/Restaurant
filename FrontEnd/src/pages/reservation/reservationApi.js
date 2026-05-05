@@ -1,5 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL;
-export async function createReservation(payload) {
+export async function createReservation(payload, useLoggedInUser = false) {
     const requestBody = {
         guestName: `${payload.guestInfo.firstName} ${payload.guestInfo.lastName}`,
         guestEmail: payload.guestInfo.email,
@@ -10,15 +10,18 @@ export async function createReservation(payload) {
         selectedTableIds: payload.selectedTable.tableIds,
         specialRequests: payload.guestInfo.specialRequest,
     };
-    console.log("FULL SELECTED TABLE:", payload.selectedTable);
-    console.log("TABLE IDS SENT:", payload.selectedTable.tableIds);
-    console.log("TABLE IDS LENGTH:", payload.selectedTable.tableIds.length);
     const token = localStorage.getItem("token");
+    const headers = {
+        "Content-Type": "application/json",
+    };
+    if (useLoggedInUser && token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
     const response = await fetch(`${API_URL}/api/reservations`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` }),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(requestBody),
     });
@@ -28,9 +31,13 @@ export async function createReservation(payload) {
     }
     return data;
 }
-export async function authorizeHoldingFee(id) {
-    const response = await fetch(`${API_URL}/api/reservations/${id}/authorize-holding-fee`, {
+export async function authorizeHoldingFee(reservationId, cardData) {
+    const response = await fetch(`${API_URL}/api/reservations/${reservationId}/authorize-holding-fee`, {
         method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(cardData),
     });
     const data = await response.json();
     if (!response.ok) {

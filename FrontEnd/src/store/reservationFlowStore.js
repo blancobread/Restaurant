@@ -1,5 +1,6 @@
 import { create } from "zustand";
 const initialState = {
+    reservationMode: null,
     searchCriteria: null,
     availableTables: [],
     selectedTable: null,
@@ -9,6 +10,9 @@ const initialState = {
 };
 export const useReservationStore = create()((set) => ({
     ...initialState,
+    setReservationMode: (mode) => set(() => ({
+        reservationMode: mode,
+    })),
     setGuestDetails: (details) => set(() => ({
         guestDetails: details,
     })),

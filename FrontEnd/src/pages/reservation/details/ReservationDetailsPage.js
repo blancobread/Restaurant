@@ -12,6 +12,7 @@ export default function ReservationDetailsPage() {
     const selectedTable = useReservationStore((s) => s.selectedTable);
     const setGuestDetails = useReservationStore((s) => s.setGuestDetails);
     const searchCriteria = useReservationStore((state) => state.searchCriteria);
+    const reservationMode = useReservationStore((s) => s.reservationMode);
     const [submitError, setSubmitError] = useState("");
     const { control, handleSubmit, formState: { errors, isSubmitting }, } = useForm({
         resolver: zodResolver(guestDetailsSchema),
@@ -30,12 +31,14 @@ export default function ReservationDetailsPage() {
         setSubmitError("");
         setGuestDetails(values);
         try {
+            const finalMode = reservationMode || sessionStorage.getItem("reservationMode");
             const response = await createReservation({
                 searchCriteria,
                 selectedTable,
                 guestInfo: values,
-            });
+            }, finalMode === "registered");
             const reservation = response.data;
+            sessionStorage.removeItem("reservationMode");
             if (reservation.requiresHoldingFee) {
                 navigate(`/reservation/payment/${reservation.reservation.id}`);
             }
