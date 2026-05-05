@@ -8,6 +8,7 @@
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
+    "noEmit": true,
     "skipLibCheck": true,
 
     "moduleResolution": "Bundler",
@@ -20,6 +21,8 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "noUncheckedIndexedAccess": false
   },
   "include": ["src"]

@@ -16,6 +16,7 @@ import { useAuthStore } from "../../../store/authStore";
 import styles from "./LoginPage.module.css";
 export default function LoginPage() {
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL;
   const {
     loginForm,
     loading,
@@ -42,7 +43,7 @@ export default function LoginPage() {
     }
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:5001/api/auth/login", {
+      const response = await fetch(`${VITE_API_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

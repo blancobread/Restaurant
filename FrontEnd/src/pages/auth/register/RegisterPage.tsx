@@ -37,6 +37,7 @@ export default function RegisterPage() {
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     resetRegisterForm();
@@ -73,7 +74,7 @@ export default function RegisterPage() {
 
       setLoading(true);
 
-      await axios.post("http://localhost:5001/api/auth/register", {
+      await axios.post(`${API_URL}/api/auth/register`, {
         userName: registerForm.name,
         userEmail: registerForm.email,
         userPhone: registerForm.phone,
@@ -86,7 +87,7 @@ export default function RegisterPage() {
         preferredPayment: registerForm.preferredPayment,
       });
 
-      const loginRes = await axios.post("http://localhost:5001/api/auth/login", {
+      const loginRes = await axios.post(`${API_URL}/api/auth/login`, {
         userEmail: registerForm.email,
         userPassword: registerForm.password,
       });

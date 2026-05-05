@@ -6,6 +6,7 @@ import styles from "./ProfilePage.module.css";
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { token, logout } = useAuthStore();
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const [profile, setProfile] = useState<any>(null);
   const [reservations, setReservations] = useState<any[]>([]);
@@ -21,14 +22,14 @@ export default function ProfilePage() {
       }
 
       // profile
-      const p = await fetch("http://localhost:5001/api/users/profile", {
+      const p = await fetch(`${API_URL}/api/users/profile`, {
         headers: { Authorization: `Bearer ${savedToken}` },
       });
       const pd = await p.json();
       setProfile(pd.data);
 
       // reservations
-      const r = await fetch("http://localhost:5001/api/users/reservations", {
+      const r = await fetch(`${API_URL}/api/users/reservations`, {
         headers: { Authorization: `Bearer ${savedToken}` },
       });
       const rd = await r.json();
