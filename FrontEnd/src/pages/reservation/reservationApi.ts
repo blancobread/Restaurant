@@ -50,10 +50,20 @@ export async function createReservation(
   return data;
 }
 
-export async function authorizeHoldingFee(id: string) {
-  const response = await fetch(`${API_URL}/api/reservations/${id}/authorize-holding-fee`, {
-    method: "POST",
-  });
+export async function authorizeHoldingFee(
+  reservationId: string,
+  cardData: { cardNumber: string; cardType: string },
+) {
+  const response = await fetch(
+    `${API_URL}/api/reservations/${reservationId}/authorize-holding-fee`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(cardData),
+    },
+  );
 
   const data = await response.json();
 

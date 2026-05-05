@@ -52,7 +52,13 @@ export const getAllReservations = async () => {
   });
 };
 
-export const authorizeHoldingFee = async (reservationId: string) => {
+export const authorizeHoldingFee = async (
+  reservationId: string,
+  cardData: {
+    cardNumber: string;
+    cardType: string;
+  },
+) => {
   const reservation = await prisma.reservations.findUnique({
     where: { id: reservationId },
   });
@@ -72,12 +78,40 @@ export const authorizeHoldingFee = async (reservationId: string) => {
     );
   }
 
-  return prisma.reservations.update({
-    where: { id: reservationId },
-    data: {
-      holding_fee_paid: true,
-      status: "CONFIRMED",
-    },
+  const cleanedCardNumber = cardData.cardNumber.replace(/\D/g, "");
+
+  if (cleanedCardNumber.length < 12 || cleanedCardNumber.length > 19) {
+    throw new HttpError("Invalid credit card number", 400);
+  }
+
+  const cardLastFour = cleanedCardNumber.slice(-4);
+
+  return prisma.$transaction(async (tx) => {
+    if (reservation.user_id) {
+      await tx.payment_methods.create({
+        data: {
+          user_id: reservation.user_id,
+          payment_type: "CREDIT",
+          card_last_four: cardLastFour,
+          card_type: cardData.cardType,
+          card_token: `demo_token_${Date.now()}`,
+          is_default: true,
+        },
+      });
+    }
+
+    const updatedReservation = await tx.reservations.update({
+      where: { id: reservationId },
+      data: {
+        holding_fee_paid: true,
+        status: "CONFIRMED",
+      },
+    });
+
+    return {
+      reservation: updatedReservation,
+      cardLastFour,
+    };
   });
 };
 

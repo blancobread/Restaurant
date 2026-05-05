@@ -11,6 +11,11 @@ import type {
   SearchAvailableTablesQuery,
 } from "../types.js";
 
+type AuthorizeHoldingFeeBody = {
+  cardNumber: string;
+  cardType: string;
+};
+
 export const searchAvailableTables = async (
   req: AppRequest<EmptyBody, EmptyParams, SearchAvailableTablesQuery>,
   res: AppResponse,
@@ -60,23 +65,33 @@ export const getAllReservations = async (
 };
 
 export const authorizeHoldingFee = async (
-  req: AppRequest<EmptyBody, ReservationIdParams>,
+  req: AppRequest<AuthorizeHoldingFeeBody, ReservationIdParams>,
   res: AppResponse,
   next: AppNext,
 ) => {
   try {
     const { id } = req.params;
+    const { cardNumber, cardType } = req.body;
 
-    const result = await reservationService.authorizeHoldingFee(id);
+    if (!cardNumber || !cardType) {
+      return res.status(400).json({
+        success: false,
+        message: "Card number and card type are required",
+      });
+    }
 
-    res.status(200).json({
+    const result = await reservationService.authorizeHoldingFee(id, {
+      cardNumber,
+      cardType,
+    });
+
+    return res.status(200).json({
       success: true,
       message: "Holding fee authorized successfully",
       data: result,
     });
-    return;
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 

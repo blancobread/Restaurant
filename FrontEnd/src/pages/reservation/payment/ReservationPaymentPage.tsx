@@ -1,8 +1,23 @@
-import { Box, Button, Card, CardContent, Container, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Container,
+  Stack,
+  TextField,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { ReservationDetails } from "../../../types";
 import { authorizeHoldingFee, getReservationById } from "../reservationApi";
+
+const CARD_TYPES = ["VISA", "MASTERCARD", "AMEX"] as const;
 
 export default function ReservationPaymentPage() {
   const { id } = useParams();
@@ -13,6 +28,10 @@ export default function ReservationPaymentPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isAuthorizing, setIsAuthorizing] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardType, setCardType] = useState("");
+  const [expiry, setExpiry] = useState("");
 
   useEffect(() => {
     async function loadReservation() {
@@ -27,7 +46,9 @@ export default function ReservationPaymentPage() {
         setReservation(response.data);
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Unable to load reservation payment details.";
+          error instanceof Error
+            ? error.message
+            : "Unable to load reservation payment details.";
 
         setErrorMessage(message);
       } finally {
@@ -38,17 +59,67 @@ export default function ReservationPaymentPage() {
     loadReservation();
   }, [id]);
 
+  const validateExpiry = (value: string) => {
+    const regex = /^(0[1-9]|1[0-2])\/\d{2}$/;
+
+    if (!regex.test(value)) return false;
+
+    const [monthStr, yearStr] = value.split("/");
+    const month = Number(monthStr);
+    const year = 2000 + Number(yearStr);
+
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    // Expired if year is less OR same year but month already passed
+    if (year < currentYear) return false;
+    if (year === currentYear && month < currentMonth) return false;
+
+    return true;
+  };
+
   const handleAuthorizeHoldingFee = async () => {
     if (!reservation) return;
 
     setPaymentError("");
+
+    const cleanedCardNumber = cardNumber.replace(/\D/g, "");
+
+    if (!cleanedCardNumber || !cardType || !expiry) {
+      setPaymentError("All fields are required");
+      return;
+    }
+
+    if (cleanedCardNumber.length < 12 || cleanedCardNumber.length > 19) {
+      setPaymentError("Card number must be between 12 and 19 digits");
+      return;
+    }
+
+    if (!CARD_TYPES.includes(cardType as (typeof CARD_TYPES)[number])) {
+      setPaymentError("Please select a valid card type");
+      return;
+    }
+
+    if (!validateExpiry(expiry)) {
+      setPaymentError("Enter a valid, non-expired expiry date (MM/YY)");
+      return;
+    }
+
     setIsAuthorizing(true);
 
     try {
-      await authorizeHoldingFee(reservation.id);
+      await authorizeHoldingFee(reservation.id, {
+        cardNumber: cleanedCardNumber,
+        cardType,
+      });
+
       navigate(`/reservation/confirmation/${reservation.id}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to authorize holding fee.";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to authorize holding fee.";
 
       setPaymentError(message);
     } finally {
@@ -68,7 +139,9 @@ export default function ReservationPaymentPage() {
     return (
       <Container sx={{ py: 6 }}>
         <Stack spacing={2}>
-          <Typography color="error">{errorMessage || "Reservation not found."}</Typography>
+          <Typography color="error">
+            {errorMessage || "Reservation not found."}
+          </Typography>
 
           <Button variant="contained" onClick={() => navigate("/reservation")}>
             Back to Reservations
@@ -91,8 +164,7 @@ export default function ReservationPaymentPage() {
               </Typography>
 
               <Typography>
-                This reservation falls on a designated high-traffic date configured in our
-                reservation system and requires a holding fee.
+                This reservation falls on a high-traffic date and requires a holding fee.
               </Typography>
 
               <Typography sx={{ fontWeight: 700 }}>
@@ -100,10 +172,51 @@ export default function ReservationPaymentPage() {
               </Typography>
 
               <Typography sx={{ color: "#64748b" }}>
-                For this MVP demo, payment processing is represented by tracking the holding-fee
-                requirement in the database. Full card authorization will be added in a future
-                iteration.
+                Enter your card details to authorize the holding fee.
               </Typography>
+
+              {/* Card Number */}
+              <TextField
+                label="Card Number"
+                value={cardNumber}
+                onChange={(e) => setCardNumber(e.target.value)}
+                fullWidth
+                slotProps={{
+                  htmlInput: {
+                    inputMode: "numeric",
+                    maxLength: 19,
+                  },
+                }}
+              />
+
+              {/* Card Type */}
+              <FormControl fullWidth>
+                <InputLabel>Card Type</InputLabel>
+                <Select
+                  value={cardType}
+                  label="Card Type"
+                  onChange={(e) => setCardType(e.target.value)}
+                >
+                  {CARD_TYPES.map((type) => (
+                    <MenuItem key={type} value={type}>
+                      {type}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <TextField
+                label="Expiry (MM/YY)"
+                placeholder="12/28"
+                value={expiry}
+                onChange={(e) => setExpiry(e.target.value)}
+                fullWidth
+                slotProps={{
+                  htmlInput: {
+                    maxLength: 5,
+                  },
+                }}
+              />
 
               <Button
                 variant="contained"
@@ -114,7 +227,9 @@ export default function ReservationPaymentPage() {
                 {isAuthorizing ? "Authorizing..." : "Authorize Holding Fee"}
               </Button>
 
-              {paymentError ? <Typography color="error">{paymentError}</Typography> : null}
+              {paymentError && (
+                <Typography color="error">{paymentError}</Typography>
+              )}
 
               <Button variant="outlined" onClick={() => navigate("/reservation")}>
                 Back to Reservation Search
